@@ -94,3 +94,9 @@ h1 {
     text-align: center;
     word-break: break-word;
 }
+
+.week-days {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
