@@ -1,13 +1,13 @@
 // Firebase 配置
 const firebaseConfig = {
-  apiKey: "AIzaSyAvBleFpF0ACQP5ZdITblyTAXZwY_NsMEg",
-  authDomain: "book-3a213.firebaseapp.com",
-  databaseURL: "https://book-3a213-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "book-3a213",
-  storageBucket: "book-3a213.firebasestorage.app",
-  messagingSenderId: "567622663755",
-  appId: "1:567622663755:web:ada5084a44ea8a140d97ce",
-  measurementId: "G-FJCH2G02M3"
+    apiKey: "AIzaSyAvBleFpF0ACQP5ZdITblyTAXZwY_NsMEg",
+    authDomain: "book-3a213.firebaseapp.com",
+    databaseURL: "https://book-3a213-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "book-3a213",
+    storageBucket: "book-3a213.firebasestorage.app",
+    messagingSenderId: "567622663755",
+    appId: "1:567622663755:web:ada5084a44ea8a140d97ce",
+    measurementId: "G-FJCH2G02M3"
 };
 
 // 初始化 Firebase
@@ -19,14 +19,9 @@ const staffMembers = [
     { id: 1, name: '李楠' }
 ];
 
-// 时间段数据
+// 时间段数据，仅保留 14:00 - 21:00
 const timeSlots = [
-    { id: 1, time: '10:00 - 12:00' },
-    { id: 2, time: '12:00 - 14:00' },
-    { id: 3, time: '14:00 - 16:00' },
-    { id: 4, time: '16:00 - 18:00' },
-    { id: 5, time: '18:00 - 20:00' },
-    { id: 6, time: '20:00 - 22:00' }
+    { id: 1, time: '14:00 - 21:00' }
 ];
 
 // 获取当前日期
@@ -47,6 +42,11 @@ function getRecentTwoWeeksDates() {
     return dates;
 }
 
+// 获取一周的星期名称数组
+function getWeekDays() {
+    return ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期天'];
+}
+
 // 初始化任务表格
 async function initScheduleTable(selectedDates) {
     const table = document.getElementById('scheduleTable');
@@ -56,11 +56,21 @@ async function initScheduleTable(selectedDates) {
         const snapshot = await database.ref('tasks').once('value');
         const tasks = snapshot.val() || {};
 
+        // 显示星期名称
+        const weekDays = getWeekDays();
+        const weekDaysDiv = document.createElement('div');
+        weekDaysDiv.className = 'week-days';
+        weekDays.forEach(day => {
+            const dayDiv = document.createElement('div');
+            dayDiv.textContent = day;
+            weekDaysDiv.appendChild(dayDiv);
+        });
+        table.appendChild(weekDaysDiv);
+
         // 遍历近两周的日期
         selectedDates.forEach(selectedDate => {
-            const dateDiv = document.createElement('div');
-            dateDiv.textContent = selectedDate;
-            table.appendChild(dateDiv);
+            const date = new Date(selectedDate);
+            const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // 调整为星期一到星期天的索引
 
             staffMembers.forEach(staff => {
                 const staffDiv = document.createElement('div');
