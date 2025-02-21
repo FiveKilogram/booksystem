@@ -56,21 +56,14 @@ async function initScheduleTable(selectedDates) {
         const snapshot = await database.ref('tasks').once('value');
         const tasks = snapshot.val() || {};
 
-        // 显示星期名称
-        const weekDays = getWeekDays();
-        const weekDaysDiv = document.createElement('div');
-        weekDaysDiv.className = 'week-days';
-        weekDays.forEach(day => {
-            const dayDiv = document.createElement('div');
-            dayDiv.textContent = day;
-            weekDaysDiv.appendChild(dayDiv);
-        });
-        table.appendChild(weekDaysDiv);
-
         // 遍历近两周的日期
         selectedDates.forEach(selectedDate => {
-            const date = new Date(selectedDate);
-            const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // 调整为星期一到星期天的索引
+            const dateDiv = document.createElement('div');
+            // 显示日期和星期几
+            const dateObj = new Date(selectedDate);
+            const weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][dateObj.getDay()];
+            dateDiv.textContent = `${selectedDate} (${weekday})`;
+            table.appendChild(dateDiv);
 
             staffMembers.forEach(staff => {
                 const staffDiv = document.createElement('div');
@@ -94,7 +87,8 @@ async function initScheduleTable(selectedDates) {
                     const isBooked = !!taskData;
 
                     button.className = `booking-button ${isBooked ? 'booked' : ''}`;
-                    button.textContent = slot.time;
+                    // 在按钮上显示日期和时间段
+                    button.textContent = `${selectedDate} ${slot.time}`;
                     button.onclick = () => toggleTask(selectedDate, staff.id, slot.id, button);
 
                     if (staff.name.includes('不可预约')) {
