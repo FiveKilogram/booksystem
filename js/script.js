@@ -14,57 +14,60 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 生成近14天的日历
+// 生成近 14 天的日历
 function generateCalendar() {
     const calendar = document.getElementById('calendar');
     const today = new Date();
     for (let i = 0; i < 14; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        const cell = document.createElement('div');
-        cell.textContent = `${year}-${month}-${day}`;
-        cell.dataset.date = `${year}-${month}-${day}`;
-        cell.addEventListener('click', () => openInputModal(cell));
-        calendar.appendChild(cell);
+        const currentDate = new Date(today);
+        currentDate.setDate(today.getDate() + i);
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        const dayElement = document.createElement('div');
+        dayElement.textContent = formattedDate;
+        dayElement.dataset.date = formattedDate;
+        dayElement.addEventListener('click', () => openModal(dayElement));
+        calendar.appendChild(dayElement);
     }
 }
 
 // 打开输入模态框
 const inputModal = document.getElementById('input-modal');
-const closeModal = document.querySelector('.close');
-let selectedCell;
-function openInputModal(cell) {
+const closeModalButton = document.querySelector('.close-modal');
+let selectedDayElement;
+
+function openModal(dayElement) {
     inputModal.style.display = 'block';
-    selectedCell = cell;
+    selectedDayElement = dayElement;
 }
 
-closeModal.addEventListener('click', () => {
+closeModalButton.addEventListener('click', () => {
     inputModal.style.display = 'none';
 });
 
 window.addEventListener('click', (event) => {
-    if (event.target == inputModal) {
+    if (event.target === inputModal) {
         inputModal.style.display = 'none';
     }
 });
 
-// 确认输入
-const confirmBtn = document.getElementById('confirm-btn');
-const inputText = document.getElementById('input-text');
-confirmBtn.addEventListener('click', () => {
-    const text = inputText.value;
-    if (text) {
-        selectedCell.textContent = `${selectedCell.dataset.date}\n${text}`;
-        selectedCell.classList.add('booked');
-        inputModal.style.display = 'none';
-        inputText.value = '';
+// 确认输入并更新日历和 Firebase
+const confirmButton = document.getElementById('confirm-button');
+const inputField = document.getElementById('input-field');
 
-        // 存入 Firebase
-        const dateRef = database.ref('dates/' + selectedCell.dataset.date);
-        dateRef.set(text);
+confirmButton.addEventListener('click', () => {
+    const inputValue = inputField.value.trim();
+    if (inputValue) {
+        selectedDayElement.textContent = `${selectedDayElement.dataset.date}\n${inputValue}`;
+        selectedDayElement.classList.add('booked');
+        inputModal.style.display = 'none';
+        inputField.value = '';
+
+        // 保存到 Firebase
+        const dateRef = database.ref('dates/' + selectedDayElement.dataset.date);
+        dateRef.set(inputValue);
     }
 });
 
@@ -74,12 +77,12 @@ function loadDataFromFirebase() {
     datesRef.on('value', (snapshot) => {
         snapshot.forEach((childSnapshot) => {
             const date = childSnapshot.key;
-            const text = childSnapshot.val();
-            const cells = document.querySelectorAll('#calendar div');
-            cells.forEach((cell) => {
-                if (cell.dataset.date === date) {
-                    cell.textContent = `${date}\n${text}`;
-                    cell.classList.add('booked');
+            const value = childSnapshot.val();
+            const dayElements = document.querySelectorAll('#calendar div');
+            dayElements.forEach((dayElement) => {
+                if (dayElement.dataset.date === date) {
+                    dayElement.textContent = `${date}\n${value}`;
+                    dayElement.classList.add('booked');
                 }
             });
         });
