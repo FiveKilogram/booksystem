@@ -18,17 +18,52 @@ const database = firebase.database();
 function generateCalendar() {
     const calendar = document.getElementById('calendar');
     const today = new Date();
+    const days = [];
     for (let i = 0; i < 14; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        const weekday = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
-        const cell = document.createElement('div');
-        cell.textContent = `${month}/${day} 周${weekday}`;
-        calendar.appendChild(cell);
+        days.push(date);
     }
+
+    const weekdayNames = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+    // 先显示星期
+    weekdayNames.forEach(weekday => {
+        const cell = document.createElement('div');
+        cell.textContent = weekday;
+        cell.style.backgroundColor = 'white';
+        cell.style.cursor = 'default';
+        calendar.appendChild(cell);
+    });
+
+    days.forEach(day => {
+        const dayNumber = day.getDate();
+        const month = day.getMonth() + 1;
+        const weekday = weekdayNames[day.getDay() === 0 ? 6 : day.getDay() - 1];
+        const cell = document.createElement('div');
+        cell.textContent = `${month}/${dayNumber} ${weekday}`;
+        cell.dataset.date = day.toISOString().split('T')[0];
+        cell.addEventListener('click', () => openBookingModal(cell.dataset.date));
+        calendar.appendChild(cell);
+    });
 }
+
+// 打开预约模态框
+const bookingModal = document.getElementById('booking-modal');
+const closeModal = document.querySelector('.close');
+function openBookingModal(date) {
+    bookingModal.style.display = 'block';
+    document.getElementById('selected-date').value = date;
+}
+
+closeModal.addEventListener('click', () => {
+    bookingModal.style.display = 'none';
+});
+
+window.addEventListener('click', (event) => {
+    if (event.target == bookingModal) {
+        bookingModal.style.display = 'none';
+    }
+});
 
 // 处理预约提交
 const bookingForm = document.getElementById('booking-form');
@@ -37,17 +72,20 @@ bookingForm.addEventListener('submit', function (e) {
     const bookingPerson = document.getElementById('booking-person').value;
     const roomName = document.getElementById('room-name').value;
     const bookingTime = document.getElementById('booking-time').value;
+    const selectedDate = document.getElementById('selected-date').value;
 
     const newBooking = {
         bookingPerson: bookingPerson,
         roomName: roomName,
-        bookingTime: bookingTime
+        bookingTime: bookingTime,
+        date: selectedDate
     };
 
     const bookingsRef = database.ref('bookings');
     bookingsRef.push(newBooking);
 
     bookingForm.reset();
+    bookingModal.style.display = 'none';
 });
 
 // 显示预约信息
@@ -59,8 +97,17 @@ function displayBookings() {
         snapshot.forEach(function (childSnapshot) {
             const booking = childSnapshot.val();
             const li = document.createElement('li');
-            li.textContent = `预约人: ${booking.bookingPerson}, 预约直播间名称: ${booking.roomName}, 预约时间: ${booking.bookingTime}`;
+            li.textContent = `预约人: ${booking.bookingPerson}, 预约的直播间名称: ${booking.roomName}, 预约的时间段: ${booking.bookingTime}, 日期: ${booking.date}`;
             bookingList.appendChild(li);
+
+            // 将已预约的日期模块变红
+            const cells = document.querySelectorAll('#calendar div');
+            cells.forEach(cell => {
+                if (cell.dataset.date === booking.date) {
+                    cell.classList.add('booked');
+                    cell.removeEventListener('click', () => openBookingModal(cell.dataset.date));
+                }
+            });
         });
     });
 }
