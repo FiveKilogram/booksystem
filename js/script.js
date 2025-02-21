@@ -14,98 +14,72 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 生成近半月的月历
+// 生成近14天的日历
 function generateCalendar() {
     const calendar = document.getElementById('calendar');
     const today = new Date();
-    const days = [];
     for (let i = 0; i < 14; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
-        days.push(date);
+        const day = date.getDate();
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        const cell = document.createElement('div');
+        cell.textContent = `${year}-${month}-${day}`;
+        cell.dataset.date = `${year}-${month}-${day}`;
+        cell.addEventListener('click', () => openInputModal(cell));
+        calendar.appendChild(cell);
     }
-
-    const weekdayNames = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-    // 先显示星期
-    weekdayNames.forEach(weekday => {
-        const cell = document.createElement('div');
-        cell.textContent = weekday;
-        cell.style.backgroundColor = 'white';
-        cell.style.cursor = 'default';
-        calendar.appendChild(cell);
-    });
-
-    days.forEach(day => {
-        const dayNumber = day.getDate();
-        const month = day.getMonth() + 1;
-        const weekday = weekdayNames[day.getDay() === 0 ? 6 : day.getDay() - 1];
-        const cell = document.createElement('div');
-        cell.textContent = `${month}/${dayNumber} ${weekday}`;
-        cell.dataset.date = day.toISOString().split('T')[0];
-        cell.addEventListener('click', () => openBookingModal(cell.dataset.date));
-        calendar.appendChild(cell);
-    });
 }
 
-// 打开预约模态框
-const bookingModal = document.getElementById('booking-modal');
+// 打开输入模态框
+const inputModal = document.getElementById('input-modal');
 const closeModal = document.querySelector('.close');
-function openBookingModal(date) {
-    bookingModal.style.display = 'block';
-    document.getElementById('selected-date').value = date;
+let selectedCell;
+function openInputModal(cell) {
+    inputModal.style.display = 'block';
+    selectedCell = cell;
 }
 
 closeModal.addEventListener('click', () => {
-    bookingModal.style.display = 'none';
+    inputModal.style.display = 'none';
 });
 
 window.addEventListener('click', (event) => {
-    if (event.target == bookingModal) {
-        bookingModal.style.display = 'none';
+    if (event.target == inputModal) {
+        inputModal.style.display = 'none';
     }
 });
 
-// 处理预约提交
-const bookingForm = document.getElementById('booking-form');
-bookingForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const bookingPerson = document.getElementById('booking-person').value;
-    const roomName = document.getElementById('room-name').value;
-    const bookingTime = document.getElementById('booking-time').value;
-    const selectedDate = document.getElementById('selected-date').value;
+// 确认输入
+const confirmBtn = document.getElementById('confirm-btn');
+const inputText = document.getElementById('input-text');
+confirmBtn.addEventListener('click', () => {
+    const text = inputText.value;
+    if (text) {
+        selectedCell.textContent = `${selectedCell.dataset.date}\n${text}`;
+        selectedCell.classList.add('booked');
+        inputModal.style.display = 'none';
+        inputText.value = '';
 
-    const newBooking = {
-        bookingPerson: bookingPerson,
-        roomName: roomName,
-        bookingTime: bookingTime,
-        date: selectedDate
-    };
-
-    const bookingsRef = database.ref('bookings');
-    bookingsRef.push(newBooking);
-
-    bookingForm.reset();
-    bookingModal.style.display = 'none';
+        // 存入 Firebase
+        const dateRef = database.ref('dates/' + selectedCell.dataset.date);
+        dateRef.set(text);
+    }
 });
 
-// 显示预约信息
-function displayBookings() {
-    const bookingList = document.getElementById('booking-list');
-    const bookingsRef = database.ref('bookings');
-    bookingsRef.on('value', function (snapshot) {
-        bookingList.innerHTML = '';
-        snapshot.forEach(function (childSnapshot) {
-            const booking = childSnapshot.val();
-            const li = document.createElement('li');
-            li.textContent = `预约人: ${booking.bookingPerson}, 预约的直播间名称: ${booking.roomName}, 预约的时间段: ${booking.bookingTime}, 日期: ${booking.date}`;
-            bookingList.appendChild(li);
-
-            // 将已预约的日期模块变红
+// 从 Firebase 加载数据
+function loadDataFromFirebase() {
+    const datesRef = database.ref('dates');
+    datesRef.on('value', (snapshot) => {
+        snapshot.forEach((childSnapshot) => {
+            const date = childSnapshot.key;
+            const text = childSnapshot.val();
             const cells = document.querySelectorAll('#calendar div');
-            cells.forEach(cell => {
-                if (cell.dataset.date === booking.date) {
+            cells.forEach((cell) => {
+                if (cell.dataset.date === date) {
+                    cell.textContent = `${date}\n${text}`;
                     cell.classList.add('booked');
-                    cell.removeEventListener('click', () => openBookingModal(cell.dataset.date));
                 }
             });
         });
@@ -114,4 +88,4 @@ function displayBookings() {
 
 // 初始化页面
 generateCalendar();
-displayBookings();
+loadDataFromFirebase();
